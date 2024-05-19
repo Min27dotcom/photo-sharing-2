@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const router = express.Router();
 const fs = require('fs');
 const verifyToken = require("../helpers/verifyToken");
+const { log } = require("util");
 const privateKey = fs.readFileSync('private.key');
 
 //dang nhap
@@ -15,7 +16,8 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid username or password" });
     }
     const token = jwt.sign({ user }, privateKey, { expiresIn: "1h" });
-    res.json({ token });
+    const { first_name, last_name, _id } = user[0];
+    res.json({ token, user: { first_name, last_name, _id } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Internal server error" });

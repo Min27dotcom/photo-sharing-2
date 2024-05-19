@@ -1,15 +1,19 @@
-import { FaComments } from "react-icons/fa";
-import { CardContent, Typography } from "@mui/material";
+import { FaComments, FaEllipsisV } from "react-icons/fa";
+import { CardContent, Typography, Menu, MenuItem, IconButton } from "@mui/material";
 import { getCookie } from "../../helpers/cookie";
-import { addComment, getCommentOfPhoto } from "../../services/photoServices";
+import { addComment, getCommentOfPhoto, deleteComment } from "../../services/photoServices";
 import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 function Comments(props) {
-  const {comments, photoId} = props;  
+  const { comments, photoId } = props;
   const token = getCookie("token");
+  const userId = getCookie("userId")
   const [newComment, setNewComment] = useState({});
   const [photoComments, setPhotoComments] = useState(comments);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [selectedComment, setSelectedComment] = useState(null);
+  const [hoveredComment, setHoveredComment] = useState(null);
   const inputRef = useRef(null);
 
   const handleChange = (e) => {
@@ -22,16 +26,40 @@ function Comments(props) {
     }
     const addNewComment = async () => {
       const result = await addComment(photoId, token, options);
-      if(result.message === "Success"){
+      if (result.message === "Success") {
         const newPhotoComments = await getCommentOfPhoto(photoId);
         setPhotoComments(newPhotoComments.comments);
-        setNewComment({})
+        setNewComment({});
         inputRef.current.value = '';
       }
-
     }
     addNewComment();
-  }
+  };
+
+  const handleMenuOpen = (event, comment) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedComment(comment);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedComment(null);
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    let options = {
+      userId: userId,
+      photoId: photoId,
+      commentId: commentId,
+    } 
+    const result = await deleteComment( photoId, token, options);
+    console.log(result);
+    if (result.message === "Success") {
+      const newPhotoComments = await getCommentOfPhoto(photoId);
+      setPhotoComments(newPhotoComments.comments);
+      handleMenuClose();
+    }
+  };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -61,35 +89,52 @@ function Comments(props) {
           <div>Comments:</div>
         </Typography>
         {photoComments.length === 0 ? (
-            <>
-            This photo have no comments 
-            </>
+          <>This photo has no comments</>
         ) : (
-            <>{photoComments.map((comment) => (
-                <div
-                  key={comment._id}
-                  style={{ borderBottom: "1px solid #444444" }}
+          <>{photoComments.map((comment) => (
+            <div
+              key={comment._id}
+              style={{ borderBottom: "1px solid #444444", position: "relative", paddingBottom: "10px", paddingTop: "10px" }}
+              onMouseEnter={() => setHoveredComment(comment._id)}
+              onMouseLeave={() => setHoveredComment(null)}
+            >
+              <Typography variant="body2" style={{ color: "#AAAAAA" }}>
+                {formatDate(comment.date_time)}
+              </Typography>
+              <Typography variant="body1">
+                <Link
+                  to={`/user/${comment.user._id}`}
+                  style={{
+                    textDecoration: "none",
+                    fontWeight: "550",
+                    color: "black",
+                  }}
                 >
-                  <Typography variant="body2" style={{ color: "#AAAAAA" }}>
-                    {formatDate(comment.date_time)}
-                  </Typography>
-                  <Typography variant="body1">
-                    <Link
-                      to={`/user/${comment.user._id}`}
-                      style={{
-                        textDecoration: "none",
-                        fontWeight: "550",
-                        color: "black",
-                      }}
-                    >
-                      {`${comment.user.first_name} ${comment.user.last_name}`}
-                    </Link>
-                    : {comment.comment}
-                  </Typography>
-                </div>
-              ))}</>
-        )
-          }
+                  {`${comment.user.first_name} ${comment.user.last_name}`}
+                </Link>
+                : <div style={{display: 'inline-block'}}>{comment.comment}</div>
+              </Typography>
+              {comment.user._id === userId && hoveredComment === comment._id && (
+                <>
+                  <IconButton
+                    style={{ position: "absolute", right: "15px", top: '25px', display: 'inline-block',fontSize: '15px' }}
+                    onClick={(e) => handleMenuOpen(e, comment)}
+                  >
+                    <FaEllipsisV />
+                  </IconButton>
+                  <Menu
+                    anchorEl={anchorEl}
+                    open={Boolean(anchorEl && selectedComment && selectedComment._id === comment._id)}
+                    onClose={handleMenuClose}
+                  >
+                    <MenuItem onClick={() => handleDeleteComment(comment._id)}>Delete</MenuItem>
+                    {/* Add Edit option here if needed */}
+                  </Menu>
+                </>
+              )}
+            </div>
+          ))}</>
+        )}
       </CardContent>
       <CardContent>
         <div style={{ display: "flex", alignItems: "center" }}>
@@ -104,6 +149,7 @@ function Comments(props) {
               paddingTop: "15px",
               marginRight: "10px",
             }}
+            ref={inputRef}
           ></textarea>
           <button
             style={{
@@ -113,7 +159,6 @@ function Comments(props) {
               cursor: "pointer",
             }}
             onClick={() => handleComment(photoId)}
-            ref={inputRef}
           >
             Add
           </button>

@@ -46,6 +46,7 @@ router.get("/:id", async function (request, response) {
 
 //Tao comment moi theo photoId
 router.post("/comment/:photoId", verifyToken, async (req, res) => {
+
   try {
     const photoId = req.params.photoId;
     const comment = {
@@ -88,6 +89,30 @@ router.get("/comment/:photoId", async (req, res) => {
   } catch (error) {
     console.error("Error:", error);
     response.status(500).send("Internal Server Error");
+  }
+});
+
+
+router.post("/comment/delete/:photoId",verifyToken,  async (req, res) => {
+  const photoId = req.params.photoId;
+  const commentId = req.body.commentId;
+  const userId = req.body.userId;
+  try {
+    if(userId === req.user[0]._id){
+      const updatedPhoto = await Photos.findByIdAndUpdate(
+        photoId,
+        { $pull: { comments: { _id: commentId } } },
+        { new: true }
+    );
+    if (!updatedPhoto) {
+        return res.status(404).json({ message: "Photo not found." });
+    }
+    return res.status(200).json({ message: "Success" });
+    }
+      
+  } catch (error) {
+      console.error("Error:", error);
+      return res.status(500).json({ message: "Internal Server Error" });
   }
 });
 

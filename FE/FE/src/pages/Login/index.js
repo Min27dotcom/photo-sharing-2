@@ -19,10 +19,11 @@ function Login() {
       password: password
     }
     const data = await getUser(loginOptions);
-    console.log(data);
+    // console.log(data);
+    // localStorage.setItem('userId', data.user._id);
     if (data.token) {
       const time = 1;
-  //     setCookie("user_id", data.id, time);
+      setCookie("userId", data.user._id, time);
   //     setCookie("fullname", data.fullname, time);
   //     setCookie("username", data.username, time);
   //     setCookie("role", data.role, time);
